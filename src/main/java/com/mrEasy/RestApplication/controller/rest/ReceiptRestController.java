@@ -37,6 +37,13 @@ public class ReceiptRestController {
         return receiptRepo.save(receipt);
     }
 
+    @PutMapping("{id}")
+    public Receipt update(@PathVariable("id") Receipt receiptFromDb,
+                          @RequestBody Receipt receipt) {
+        BeanUtils.copyProperties(receipt, receiptFromDb, "receiptId");
+        return receiptRepo.save(receiptFromDb);
+    }
+
     @DeleteMapping("{id}")
     public void delete(@PathVariable("id") Receipt receipt) {
         receiptRepo.delete(receipt);

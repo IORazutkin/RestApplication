@@ -6,7 +6,6 @@ import Vuetify from 'vuetify'
 import '@babel/polyfill'
 import 'vuetify/dist/vuetify.min.css'
 
-
 Vue.use(Vuetify)
 Vue.use(VueResource)
 

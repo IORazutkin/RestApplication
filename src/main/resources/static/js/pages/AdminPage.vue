@@ -2,7 +2,7 @@
     <v-card class="mx-5">
         <v-card-title>
             <v-tabs color="teal" grow>
-                <v-tab @click="receiptsClick">Receipts</v-tab>
+                <v-tab>Receipts</v-tab>
                 <v-tab>Services</v-tab>
                 <v-tab-item>
                     <v-row align="center" dense>
@@ -14,23 +14,28 @@
                                     label="Unpaid only">
                             </v-switch>
                         </v-col>
-                        <v-col cols="6">
+                        <v-col cols="10">
                             <v-select
                                     v-model="select"
-                                    :items="items"
+                                    :items="services"
                                     color="teal"
                                     label="Type of service"
                                     append-icon="arrow_drop_down">
+                                <template v-slot:item="{item, on}">
+                                    <v-list-item v-on="on">
+                                        <v-list-item-content>{{ item.title }}</v-list-item-content>
+                                    </v-list-item>
+                                </template>
+                                <template v-slot:selection="{item}">
+                                    <span class="ml-3">{{ item.title }}</span>
+                                </template>
                             </v-select>
-                        </v-col>
-                        <v-col>
-                            <v-btn class="white--text float-right" width="50%" color="teal" @click="showClick">Show</v-btn>
                         </v-col>
                     </v-row>
                     <v-divider/>
                     <v-dialog v-model="receiptDialog" width="500">
                         <template v-slot:activator="{ on }">
-                            <v-btn @click="selectHouseType = '', houseList = [], el = 1"
+                            <v-btn @click="selectHouseType = '', el = 1"
                                    color="teal" text width="100%" v-on="on">
                                 <v-icon left>add</v-icon>Add new receipts
                             </v-btn>
@@ -39,9 +44,7 @@
                         <v-stepper v-model="el" :editable="el == 2">
                             <v-stepper-header>
                                 <v-stepper-step editable :complete="el > 1" step="1">Houses</v-stepper-step>
-
                                 <v-divider></v-divider>
-
                                 <v-stepper-step step="2">Apartments<small>Optional</small></v-stepper-step>
                             </v-stepper-header>
                             <v-stepper-items>
@@ -53,11 +56,11 @@
                                             color="teal"/>
                                     <v-list v-if="houses.length > 0" class="mb-5">
                                         <v-list-item
-                                                v-for="(house, i) in houses"
+                                                v-for="(house, i) in updateHouses()"
                                                 :key="i">
                                             <v-list-item-action>
                                                 <v-card outlined elevation="1">
-                                                    <v-checkbox v-model="houseList[i]"
+                                                    <v-checkbox v-model="house.checked"
                                                                 on-icon="done"
                                                                 color="teal">
                                                     </v-checkbox>
@@ -85,7 +88,8 @@
                                                     label="Type of service"
                                                     append-icon="arrow_drop_down">
                                                 <template v-slot:item="{item, on}">
-                                                    <v-list-item v-on="on" :disabled="!item.forHouse">
+                                                    <v-list-item :style="(item.title == 'All' || !item.forHouse) ?
+                                                        'display: none' : ''" v-on="on">
                                                         <v-list-item-content>{{ item.title }}</v-list-item-content>
                                                     </v-list-item>
                                                 </template>
@@ -95,7 +99,7 @@
                                             </v-select>
                                         </v-col>
                                         <v-col cols="4">
-                                            <v-btn :disabled="selectHouseType == '' || !isHouse"
+                                            <v-btn :disabled="selectHouseType == '' || !houses.some(house => house.checked)"
                                                    class="white--text" color="teal" @click="houseClick">Add receipts</v-btn>
                                         </v-col>
                                     </v-row>
@@ -106,14 +110,14 @@
                                             v-model="apartmentNumber"
                                             label="Search"
                                             append-icon="search"
-                                            color="teal"
-                                    ></v-text-field>
+                                            color="teal">
+                                    </v-text-field>
                                     <v-list class="mb-5" tile>
                                         <v-list-item-group color="teal">
                                             <v-list-item
-                                                    v-model="isApartment"
-                                                    v-for="(apartment, i) in apartments"
-                                                    @change="apartmentList = apartment"
+                                                    v-for="(apartment, i) in updateApartments()"
+                                                    @change="apartmentList = (apartmentList == apartment) ?
+                                                        '' : apartment"
                                                     :key="i">
                                                 <v-list-item-content >
                                                     <v-list-item-title v-text="apartment.apartmentNumber"/>
@@ -129,7 +133,8 @@
                                                 label="Type of service"
                                                 append-icon="arrow_drop_down">
                                             <template v-slot:item="{item, on}">
-                                                <v-list-item v-on="on" :disabled="item.forHouse">
+                                                <v-list-item :style="(item.title == 'All' || item.forHouse) ?
+                                                        'display: none' : ''" v-on="on">
                                                     <v-list-item-content>{{ item.title }}</v-list-item-content>
                                                 </v-list-item>
                                             </template>
@@ -151,7 +156,6 @@
                                         </v-col>
                                         <v-col cols="4">
                                             <v-btn :disabled="selectApartmentType == ''
-                                                || !isApartment
                                                 || serviceValue == ''
                                                 || !serviceValueError"
                                                    class="white--text" color="teal" @click="apartmentClick">Add receipts</v-btn>
@@ -168,7 +172,7 @@
                     </v-row>
                     <v-data-table v-else
                                   dense
-                                  :items="receipts"
+                                  :items="updateReceipts()"
                                   item-key="receiptId">
                         <template v-slot:item="{item}">
                             <v-footer class="ma-3 subtitle-1" elevation="2"
@@ -177,8 +181,8 @@
                                     <v-col style="text-align: left;" cols="2"><b>RECEIPT №{{ item.receiptId }}</b></v-col>
                                     <v-divider vertical/>
                                     <v-col cols="3">
-                                        {{ item.formationDate.slice(0,10) }} /
-                                        <span v-if="item.paymentDate">{{ item.paymentDate.slice(0,10) }}</span>
+                                        {{ new Date(item.formationDate).toLocaleDateString() }} /
+                                        <span v-if="item.paymentDate">{{ new Date(item.paymentDate).toLocaleDateString() }}</span>
                                         <span v-else class="red--text"><b>null</b></span>
                                     </v-col>
                                     <v-divider vertical/>
@@ -209,7 +213,7 @@
                     <div class="text-center">
                         <v-dialog v-model="dialog" width="500">
                             <template v-slot:activator="{ on }">
-                                <v-btn @click="serviceId = ''" color="teal" text width="100%" v-on="on">
+                                <v-btn @click="service.serviceId = ''" color="teal" text width="100%" v-on="on">
                                     <v-icon left>add</v-icon>Add new service
                                 </v-btn>
                             </template>
@@ -219,7 +223,7 @@
                                 <v-card-text>
                                     <v-row class="mx-0">
                                         <v-text-field
-                                                v-model="serviceTitle"
+                                                v-model="service.serviceTitle"
                                                 color="teal"
                                                 label="Service name"
                                                 clearable clear-icon="clear"
@@ -229,7 +233,7 @@
                                     <v-row>
                                         <v-col>
                                             <v-text-field
-                                                    v-model="servicePrice"
+                                                    v-model="service.servicePrice"
                                                     color="teal"
                                                     label="Price"
                                                     append-icon="attach_money"
@@ -239,7 +243,7 @@
                                         </v-col>
                                         <v-col>
                                             <v-text-field
-                                                    v-model="serviceUnit"
+                                                    v-model="service.serviceUnit"
                                                     color="teal"
                                                     label="Unit"
                                                     clearable clear-icon="clear"
@@ -248,7 +252,7 @@
                                         </v-col>
                                     </v-row>
                                     <v-row class="mx-0">
-                                        <v-switch color="teal" v-model="serviceForHouse"
+                                        <v-switch color="teal" v-model="service.serviceForHouse"
                                                   inset label="Service for the whole house"/>
                                     </v-row>
                                 </v-card-text>
@@ -299,40 +303,44 @@
                 el: 0,
 
                 houseAddress: '',
-                address: '',
-                houseList: [],
                 houses: [],
-                isHouse: false,
+                updateHouses() {
+                    return this.houses
+                        .filter(house => house.address.startsWith(this.houseAddress))
+                },
 
                 apartmentNumber: '',
-                isApartment: false,
                 apartments: [],
                 apartmentList: '',
+                updateApartments() {
+                    return this.apartments
+                        .filter(apartment => apartment.apartmentNumber
+                            .toString().startsWith(this.apartmentNumber))
+                },
 
-                serviceValue: '',
                 serviceValueError: false,
 
                 dialog: false,
                 receiptDialog: false,
 
-                serviceId: '',
-                serviceTitle: '',
-                servicePrice: '',
-                serviceUnit: '',
-                serviceForHouse: false,
+                service: {},
 
-                receiptDeleteDialog: '',
+                serviceValue: '',
+                selectHouseType: '',
+                selectApartmentType: '',
 
-                select: 'All',
+                select: { title: 'All' },
                 unpaidOnly: false,
 
                 receipts: [],
-                services: [],
-                selectHouseType: '',
-                selectApartmentType: '',
-                items: [
-                    'All'
-                ],
+                updateReceipts() {
+                    return this.receipts.filter(item => {
+                        return (!this.unpaidOnly || !item.payer) &&
+                            (this.select.title == 'All' || this.select.title == item.service.title)
+                    })
+                },
+
+                services: [ {title: 'All'} ],
                 serviceValueRule: v => {
                     const pattern = /^[1-9][0-9]*((\.|,)[0-9]+)?$/
                     this.serviceValueError = pattern.test(v)
@@ -340,97 +348,55 @@
                 }
             }
         },
-        watch: {
-            houseAddress(v) {
-                this.houseList = []
-                this.$resource('/houses{/id}').get({address: v}).then(result => this.houses = result.data)
-            },
-            apartmentNumber(v) {
-                this.$resource('/apartments{/id}').get({address: this.address, number: v})
-                    .then(result => this.apartments = result.data)
-            },
-            houseList() {
-                var isHouse = false
-                this.houseList.forEach(item => isHouse = isHouse || item)
-                this.isHouse = isHouse
-            }
-        },
         created() {
             const item = { text: 'admin page', disabled: false, href: '/admin'}
             breadcrumbs.push(item)
 
             this.$resource('/services{/id}').get({}).then(result => {
-                result.data.forEach(service => {
-                    this.services.push(service)
-                    this.items.push(service.title)
-                })
+                result.data.forEach(service => this.services.push(service))
             })
 
-            this.$resource('/houses{/id}').get({}).then(result => this.houses = result.data)
+            this.$resource('/houses{/id}').get({}).then(result => {
+                this.houses = result.data.map(house => ({address: house.address, checked: false}))
+            })
 
             this.$resource('/receipts{/id}').get({}).then(result => this.receipts = result.data)
         },
         methods: {
             addService() {
-                const service = { title: this.serviceTitle,
-                                  price: this.servicePrice,
-                                  unit: this.serviceUnit,
-                                  forHouse: this.serviceForHouse
-                }
-                if (service.title != ''
-                        && service.price != '') {
-                    if (this.serviceId == '') {
-                        this.$resource('/services{/id}').save({}, service).then(result => {
+                this.services = [ {title: 'All'} ]
+                if (service.title && service.price) {
+                    if (!this.service.serviceId) {
+                        this.$resource('/services{/id}').save({}, this.service).then(result => {
                             this.services.push(result.data)
                         })
                     } else {
-                        this.$resource('/services{/id}').update({id: this.serviceId}, service)
-                        for (var i = 0; i < this.services.length; i++) {
-                            if (this.services[i].serviceId == this.serviceId) {
-                                service.serviceId = this.serviceId
-                                this.services.splice(i, 1, service)
+                        this.$resource('/services{/id}').update({id: this.serviceId}, this.service)
+                        for (let i = 0; i < this.services.length; i++) {
+                            if (this.services[i].serviceId == this.service.serviceId) {
+                                this.services[i] = this.service
                                 break
                             }
                         }
                     }
                 }
-                this.serviceTitle = ''
-                this.servicePrice = ''
-                this.serviceUnit = ''
-                this.serviceForHouse = false
-
+                this.service = {}
                 this.dialog = false
-                this.serviceId = ''
             },
             editService(service) {
-                this.serviceId = service.serviceId
+                this.service = service
                 this.dialog = true
-                this.serviceTitle = service.title
-                this.servicePrice = service.price
-                this.serviceUnit = service.unit
-                this.serviceForHouse = service.forHouse
-            },
-            receiptsClick() {
-                this.items.splice(1, this.items.length - 1)
-                this.$resource('/services{/id}').get({}).then(result => {
-                    result.data.forEach(service => {
-                        this.items.push(service.title)
-                    })
-                })
             },
             housesNext(address) {
                 this.el = 2
                 this.address = address
-                this.apartmentNumber = ''
-                this.selectApartmentType = ''
-                this.serviceValue = ''
-                this.apartmentList = '',
+                this.apartmentNumber = this.selectApartmentType = this.serviceValue = this.apartmentList = ''
                 this.$resource('/apartments{/id}').get({address}).then(result => this.apartments = result.data)
             },
             houseClick() {
-                for (var i = 0; i < this.houseList.length; i++) {
-                    if (this.houseList[i]) {
-                        this.$resource('/apartments{/id}').get({address: this.houses[i].address}).then(result => {
+                for (let item of this.houses) {
+                    if (item.checked) {
+                        this.$resource('/apartments{/id}').get({address: item.address}).then(result => {
                             result.data.forEach(data => {
                                 const receipt = {
                                     service: this.selectHouseType,
@@ -452,17 +418,12 @@
                 }
                 this.$resource('/receipts{/id}').save({}, receipt).then(result => this.receipts.unshift(result.data))
             },
-            showClick() {
-                this.$resource('/receipts{/id}')
-                    .get({serviceTitle: this.select, unpaidOnly: this.unpaidOnly})
-                    .then(result => this.receipts = result.data)
-            },
             deleteReceipt(item) {
-                const isDelete = confirm('Are you sure you want to delete the receipt №' + item.receiptId + '?')
+                const isDelete = confirm(`Are you sure you want to delete the receipt №${item.receiptId}?`)
                 if (isDelete) {
                     this.$resource('/receipts{/id}').delete({id: item.receiptId})
-                    for (var i = 0; i < this.receipts.length; i++) {
-                        if (this.receipts[i].receiptId == item.receiptId) {
+                    for (let i in this.receipts.length) {
+                        if (this.receipts[i].receiptId === item.receiptId) {
                             this.receipts.splice(i, 1)
                             break
                         }
@@ -474,5 +435,4 @@
 </script>
 
 <style>
-
 </style>

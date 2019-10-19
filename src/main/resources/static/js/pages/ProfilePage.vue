@@ -6,7 +6,7 @@
                 <v-text-field
                         :rules="[rules.required]"
                         :readonly="!isEdit"
-                        v-model="fullName"
+                        v-model="profileForm.fullName"
                         color="teal"
                         prepend-inner-icon="perm_identity"
                         label="Full name"
@@ -18,7 +18,7 @@
                     <v-text-field
                             :rules="[rules.required]"
                             :readonly="!isEdit"
-                            v-model="address"
+                            v-model="profileForm.address"
                             color="teal"
                             prepend-inner-icon="location_city"
                             label="Address"
@@ -29,7 +29,7 @@
                     <v-text-field
                             :rules="[rules.required, rules.number]"
                             :readonly="!isEdit"
-                            v-model="apartmentNumber"
+                            v-model="profileForm.apartmentNumber"
                             color="teal"
                             prepend-inner-icon="apartment"
                             label="Apartment number"
@@ -42,7 +42,7 @@
                         :error="usernameError"
                         :rules="[rules.required, rules.email]"
                         :readonly="!isEdit"
-                        v-model="username"
+                        v-model="profileForm.username"
                         color="teal"
                         prepend-inner-icon="mail_outline"
                         label="E-mail"
@@ -54,7 +54,7 @@
                 <v-text-field
                         :rules="[rules.required, rules.min]"
                         :readonly="!isEdit"
-                        v-model="password"
+                        v-model="profileForm.password"
                         color="teal"
                         prepend-inner-icon="lock_outline"
                         label="Password"
@@ -66,13 +66,13 @@
                     class="mt-1"
                     dark
                     border="left"
-                    :color="isError ? 'red lighten-1' : 'green'"
+                    :color="alert.isError ? 'red lighten-1' : 'green'"
                     elevation="2"
-                    :value="alertValue"
+                    :value="alert.value"
                     dense>
                 <v-layout row>
-                    <v-icon class="mx-3">{{ isError ? 'error_outline' : 'done' }}</v-icon>
-                    {{ alertText }}
+                    <v-icon class="mx-3">{{ alert.isError ? 'error_outline' : 'done' }}</v-icon>
+                    {{ alert.text }}
                 </v-layout>
             </v-alert>
             <v-btn :disabled="!isEdit" class="mb-0 mt-2 white--text" color="teal" width="15%" @click="saveClick">Save</v-btn>
@@ -86,22 +86,16 @@
         data() {
             return {
                 profile: frontendData.profile,
-                fullName: '',
-                address: '',
-                apartmentNumber: '',
-                username: '',
-                password: '',
+                profileForm: { fullName: '', address: '', apartmentNumber: '', username: '', password: '' },
 
-                alertValue: false,
-                alertText: '',
-                isError: true,
+                alert: { value: false, isError: false, text: '' },
 
                 usernameError: false,
                 isEdit: false,
 
                 rules: {
                     required: value => !!value || 'Required',
-                    min: v => v.length >= 5 || 'Min 5 characters',
+                    min: v => !v || v.length >= 5 || 'Min 5 characters',
                     email: value => {
                         this.usernameError = false
                         const pattern = /^((([a-zA-Z._-]+[0-9]*)+)@([a-z]{2,10})\.([a-z]{2,8}))$/
@@ -111,65 +105,56 @@
                         const pattern = /^[1-9]+[0-9]*$/
                         return pattern.test(value) || 'Invalid number'
                     }
-                }
+                },
+                checkValidity() {
+                    return this.rules.email(this.profileForm.username) !== true ||
+                        this.rules.number(this.profileForm.apartmentNumber) !== true ||
+                        this.rules.min(this.profileForm.password) !== true
+                },
+                showAlert(isError, text) {
+                    this.alert.isError = isError
+                    this.alert.text = text
+                    this.alert.value = true
+                },
             }
         },
         created() {
             const item = { text: 'profile', disabled: false, href: '/profile'}
             breadcrumbs.push(item)
-            this.$resource('/users{/id}').get({id: this.profile.userId}).then(result => {
-                this.fullName = result.data.fullName
-                this.address = result.data.apartment.house.address
-                this.apartmentNumber = result.data.apartment.apartmentNumber
-                this.username = result.data.username
-                this.password = result.data.password
-            })
 
+            this.$resource('/users{/id}').get({id: this.profile.userId})
+                .then(result => {
+                    let data = result.data
+                    this.profileForm.fullName = data.fullName
+                    this.profileForm.address = data.apartment.house.address
+                    this.profileForm.apartmentNumber = data.apartment.apartmentNumber
+                    this.profileForm.username = data.username
+                    this.profileForm.password = data.password
+                })
         },
         methods: {
             editClick() {
                 this.isEdit = true
             },
             saveClick() {
-                const user = {
-                                  fullName: this.fullName,
-                                  username: this.username,
-                                  password: this.password,
-                                  address: this.address,
-                                  apartmentNumber: this.apartmentNumber
+                if (Object.values(this.profileForm).some(field => !field)) {
+                    this.showAlert(true, 'All fields required')
                 }
-                if (this.fullName == ''
-                            || this.address == ''
-                            || this.apartmentNumber == ''
-                            || this.username == ''
-                            || this.password == '') {
-                    this.isError = true
-                    this.alertValue = true
-                    this.alertText = 'All fields required'
-                }
-                else if (!this.rules.email(this.email)
-                            || !this.rules.number(this.apartmentNumber)
-                            || !this.rules.min(this.password)) {
-                    this.isError = true
-                    this.alertValue = true
-                    this.alertText = 'Invalid fields'
+                else if (this.checkValidity()) {
+                    this.showAlert(true, 'Invalid fields')
                 }
                 else {
-                    this.$resource('/users{/id}').update({id: this.profile.userId}, user).then(result => {
-                        if (result.data == '') {
-                            this.isError = true
-                            this.alertValue = true
+                    this.$resource('/users{/id}').update({id: this.profile.userId}, this.profileForm).then(result => {
+                        if (!result.data) {
+                            this.showAlert(true, 'A user with the same e-mail already exists')
                             this.usernameError = true
-                            this.alertText = 'A user with the same e-mail already exists'
                         } else {
-                            this.isError = false
-                            this.alertValue = true
-                            this.alertText = 'User data updated'
-                            this.isEdit = false
+                            this.showAlert(false, 'User data updated')
+                            this.isEdit = false;
 
-                            this.profile.fullName = this.fullName
-                            this.profile.apartment.apartmentNumber = this.apartmentNumber
-                            this.profile.apartment.house.address = this.address
+                            ({ fullName: this.profile.fullName,
+                               address: this.profile.apartment.house.address,
+                               apartmentNumber: this.profile.apartment.apartmentNumber } = this.profileForm)
                         }
                     })
                 }
@@ -179,5 +164,4 @@
 </script>
 
 <style>
-
 </style>

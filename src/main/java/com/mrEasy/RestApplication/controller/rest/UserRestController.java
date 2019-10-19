@@ -37,27 +37,31 @@ public class UserRestController {
         return user;
     }
 
+    private void setHouseAndApartment(User user) {
+        House house = houseRepo.findByAddress(user.getAddress());
+        Apartment apartment;
+        if (house == null) {
+            house = new House(user.getAddress());
+            houseRepo.save(house);
+            apartment = new Apartment(house, user.getApartmentNumber());
+            apartmentRepo.save(apartment);
+        } else {
+            apartment = apartmentRepo.findByHouseAndApartmentNumber(house, user.getApartmentNumber());
+            if (apartment == null) {
+                apartment = new Apartment(house, user.getApartmentNumber());
+                apartmentRepo.save(apartment);
+            }
+        }
+
+        user.setApartment(apartment);
+    }
+
     @PostMapping
     public User addUser(@RequestBody User user) {
         if (userRepo.findByUsername(user.getUsername()) != null) {
             return null;
         } else {
-            House house = houseRepo.findByAddress(user.getAddress());
-            Apartment apartment;
-            if (house == null) {
-                house = new House(user.getAddress());
-                houseRepo.save(house);
-                apartment = new Apartment(house, user.getApartmentNumber());
-                apartmentRepo.save(apartment);
-            } else {
-                apartment = apartmentRepo.findByHouseAndApartmentNumber(house, user.getApartmentNumber());
-                if (apartment == null) {
-                    apartment = new Apartment(house, user.getApartmentNumber());
-                    apartmentRepo.save(apartment);
-                }
-            }
-
-            user.setApartment(apartment);
+            setHouseAndApartment(user);
             user.setRoles(Collections.singleton(Role.USER));
 
             return userRepo.save(user);
@@ -71,23 +75,7 @@ public class UserRestController {
         if (tempUser != null && tempUser.getUserId() != userFromDb.getUserId()) {
             return null;
         } else {
-            House house = houseRepo.findByAddress(user.getAddress());
-            Apartment apartment;
-            if (house == null) {
-                house = new House(user.getAddress());
-                houseRepo.save(house);
-                apartment = new Apartment(house, user.getApartmentNumber());
-                apartmentRepo.save(apartment);
-            } else {
-                apartment = apartmentRepo.findByHouseAndApartmentNumber(house, user.getApartmentNumber());
-                if (apartment == null) {
-                    apartment = new Apartment(house, user.getApartmentNumber());
-                    apartmentRepo.save(apartment);
-                }
-            }
-
-            user.setApartment(apartment);
-
+            setHouseAndApartment(user);
             BeanUtils.copyProperties(user, userFromDb, "userId", "roles");
 
             return userRepo.save(userFromDb);

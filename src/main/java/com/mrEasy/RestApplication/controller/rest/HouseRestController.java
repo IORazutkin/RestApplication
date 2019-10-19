@@ -21,10 +21,7 @@ public class HouseRestController {
     }
 
     @GetMapping
-    public List<House> getList(@RequestParam(required = false, defaultValue = "") String address) {
-        return houseRepo.findAll(Sort.by("address")).stream()
-                .filter(x -> x.getAddress().startsWith(address))
-                .distinct()
-                .collect(Collectors.toList());
+    public List<House> getList() {
+        return houseRepo.findAll(Sort.by("address"));
     }
 }

@@ -23,12 +23,9 @@ public class ApartmentRestController {
     }
 
     @GetMapping
-    public List<Apartment> getList(@RequestParam(defaultValue = "") String address,
-                                   @RequestParam(required = false, defaultValue = "") String number) {
+    public List<Apartment> getList(@RequestParam(defaultValue = "") String address) {
         return apartmentRepo.findAll(Sort.by("apartmentNumber")).stream()
                 .filter(x -> x.getHouse().getAddress().equals(address))
-                .filter(x -> x.getApartmentNumber().toString().startsWith(number))
-                .distinct()
                 .collect(Collectors.toList());
     }
 }

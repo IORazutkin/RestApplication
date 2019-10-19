@@ -11,7 +11,7 @@
                             label="Unpaid only">
                     </v-switch>
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="10">
                     <v-select
                             v-model="select"
                             :items="items"
@@ -20,15 +20,14 @@
                             append-icon="arrow_drop_down">
                     </v-select>
                 </v-col>
-                <v-col>
-                    <v-btn class="white--text float-right" width="50%" color="teal" @click="showClick">Show</v-btn>
-                </v-col>
             </v-row>
             <v-divider/>
-            <v-row v-if="receipts.length == 0" class="mt-10 mb-7" justify="center"><span class="title font-weight-light">No receipts</span></v-row>
+            <v-row v-if="receipts.length == 0" class="mt-10 mb-7" justify="center">
+                <span class="title font-weight-light">No receipts</span>
+            </v-row>
             <v-data-table v-else
                           dense
-                          :items="receipts"
+                          :items="updateReceipts()"
                           item-key="receiptId">
                 <template v-slot:item="{item}">
                     <v-footer class="ma-3 subtitle-1" elevation="2"
@@ -37,8 +36,8 @@
                             <v-col style="text-align: left;" cols="2"><b>RECEIPT №{{ item.receiptId }}</b></v-col>
                             <v-divider vertical/>
                             <v-col cols="3">
-                                {{ item.formationDate.slice(0,10) }} /
-                                <span v-if="item.paymentDate">{{ item.paymentDate.toString().slice(0,10) }}</span>
+                                {{ new Date(item.formationDate).toLocaleDateString() }} /
+                                <span v-if="item.paymentDate">{{ new Date(item.paymentDate).toLocaleDateString() }}</span>
                                 <span v-else class="red--text"><b>null</b></span>
                             </v-col>
                             <v-divider vertical/>
@@ -130,16 +129,24 @@
                 dialog: false,
 
                 receipt: {
-                    price: 0,
                     service: { price: 0 }
                 },
 
                 receipts: [],
-                select: 'All',
                 items: [
                     'All'
                 ],
+
+                select: 'All',
                 unpaidOnly: false,
+
+                updateReceipts() {
+                    return this.receipts.filter(item => {
+                        return (!this.unpaidOnly || !item.payer) &&
+                            (this.select == 'All' || this.select == item.service.title)
+                    })
+                },
+
                 profile: frontendData.profile,
             }
         },
@@ -154,12 +161,6 @@
                 .then(result => this.receipts = result.data)
         },
         methods: {
-            showClick() {
-                console.log(this.unpaidOnly)
-                this.$resource('/receipts{/id}')
-                    .get({serviceTitle: this.select, unpaidOnly: this.unpaidOnly, apartmentId: this.profile.apartment.apartmentId})
-                    .then(result => this.receipts = result.data)
-            },
             payClick() {
                 this.$resource('/users{/id}').get({id : this.profile.userId}).then(result => {
                     result.json().then(data => {
@@ -167,16 +168,14 @@
                         this.receipt.paymentDate = new Date()
 
                         this.$resource('/receipts{/id}').update({id: this.receipt.receiptId}, this.receipt).then(res => {
-                            for (var i = 0; i < this.receipts.length; i++) {
-                                if (this.receipts[i].receiptId == res.data.receiptId) {
-                                    this.receipts.splice(i, 1, res.data)
+                            for (let i = 0; i < this.receipts.length; i++) {
+                                if (this.receipts[i].receiptId === res.data.receiptId) {
+                                    this.receipts[i] = res.data
                                     break
                                 }
                             }
                         })
                     })
-
-
                 })
             },
             cardClick(item) {

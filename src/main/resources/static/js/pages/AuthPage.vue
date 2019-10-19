@@ -4,6 +4,7 @@
             <v-tabs color="teal" grow>
                 <v-tab @click="click">Sign In</v-tab>
                 <v-tab @click="click">Sign Up</v-tab>
+                <!--Форма авторизации-->
                 <v-tab-item>
                     <form action="/login" method="post">
                         <v-layout row class="mx-0">
@@ -32,23 +33,24 @@
                         <v-alert
                                 dark
                                 border="left"
-                                :color="isError ? 'red lighten-1' : 'green'"
+                                :color="alert.isError ? 'red lighten-1' : 'green'"
                                 elevation="2"
-                                :value="alertValue"
+                                :value="alert.value"
                                 dense>
                             <v-layout row>
-                                <v-icon class="mx-3">{{ isError ? 'error_outline' : 'done' }}</v-icon>
-                                {{ alertText }}
+                                <v-icon class="mx-3">{{ alert.isError ? 'error_outline' : 'done' }}</v-icon>
+                                {{ alert.text }}
                             </v-layout>
                         </v-alert>
-                        <v-btn type="submit" color="teal mb-2" class="white--text" width="100%" @click="signIn">Sign In</v-btn>
+                        <v-btn type="submit" color="teal mb-2" class="white--text" width="100%">Sign In</v-btn>
                     </form>
                 </v-tab-item>
+                <!--Форма регистрации-->
                 <v-tab-item>
                     <v-layout row class="mx-0">
                         <v-text-field
                                 :rules="[rules.required]"
-                                v-model="fullName"
+                                v-model="regForm.fullName"
                                 color="teal"
                                 prepend-inner-icon="perm_identity"
                                 label="Full name"
@@ -59,7 +61,7 @@
                         <v-layout col>
                             <v-text-field
                                     :rules="[rules.required]"
-                                    v-model="city"
+                                    v-model="regForm.city"
                                     color="teal"
                                     prepend-inner-icon="location_city"
                                     label="City"
@@ -70,7 +72,7 @@
                         <v-layout col>
                             <v-text-field
                                     :rules="[rules.required]"
-                                    v-model="street"
+                                    v-model="regForm.street"
                                     color="teal"
                                     prepend-inner-icon="local_florist"
                                     label="Street"
@@ -82,7 +84,7 @@
                         <v-layout col>
                             <v-text-field
                                     :rules="[rules.required]"
-                                    v-model="houseNumber"
+                                    v-model="regForm.house"
                                     color="teal"
                                     prepend-inner-icon="room"
                                     label="House number"
@@ -93,7 +95,7 @@
                         <v-layout col>
                             <v-text-field
                                     :rules="[rules.required, rules.number]"
-                                    v-model="apartmentNumber"
+                                    v-model="regForm.apartmentNumber"
                                     color="teal"
                                     prepend-inner-icon="apartment"
                                     label="Apartment number"
@@ -103,9 +105,8 @@
                     </v-layout>
                     <v-layout row class="mx-0">
                         <v-text-field
-                                :error="usernameError"
                                 :rules="[rules.required, rules.email]"
-                                v-model="username"
+                                v-model="regForm.username"
                                 color="teal"
                                 prepend-inner-icon="mail_outline"
                                 label="E-mail"
@@ -117,7 +118,7 @@
                         <v-layout col>
                             <v-text-field
                                     :rules="[rules.required, rules.min]"
-                                    v-model="password"
+                                    v-model="regForm.password"
                                     color="teal"
                                     prepend-inner-icon="lock_outline"
                                     label="Password"
@@ -127,9 +128,8 @@
                         </v-layout>
                         <v-layout col>
                             <v-text-field
-                                    :error="confirmError"
                                     :rules="[rules.required, rules.confirm]"
-                                    v-model="confirmPassword"
+                                    v-model="regForm.confirmPassword"
                                     color="teal"
                                     prepend-inner-icon="lock_outline"
                                     label="Confirm password"
@@ -141,13 +141,13 @@
                     <v-alert
                             dark
                             border="left"
-                            :color="isError ? 'red lighten-1' : 'green'"
+                            :color="alert.isError ? 'red lighten-1' : 'green'"
                             elevation="2"
-                            :value="alertValue"
+                            :value="alert.value"
                             dense>
                         <v-layout row>
-                            <v-icon class="mx-3">{{ isError ? 'error_outline' : 'done' }}</v-icon>
-                            {{ alertText }}
+                            <v-icon class="mx-3">{{ alert.isError ? 'error_outline' : 'done' }}</v-icon>
+                            {{ alert.text }}
                         </v-layout>
                     </v-alert>
                     <v-btn color="teal mb-2" class="white--text" width="100%" @click="signUp">Sign Up</v-btn>
@@ -158,50 +158,41 @@
 </template>
 
 <script>
-    import Vue from 'vue'
-    import VueResource from 'vue-resource'
-
-    Vue.use(VueResource)
-
-    const userApi = Vue.resource('/users{/id}')
     export default {
         data() {
             return {
-                fullName: '',
-                city: '',
-                street: '',
-                houseNumber: '',
-                apartmentNumber: '',
-                username: '',
-                password: '',
-                confirmPassword: '',
+                regForm: { fullName: '', city: '', street: '',
+                    house: '', apartmentNumber: '',
+                    username: '', password: '', confirmPassword: ''},
 
-                alertValue: false,
-                alertText: '',
-                isError: true,
+                alert: {isError: false, text: '', value: false},
 
-                confirmError: false,
-                usernameError: false,
+                showAlert(isError, text) {
+                    this.alert.isError = isError
+                    this.alert.text = text
+                    this.alert.value = true
+                },
 
                 logUser: '',
                 logPass: '',
 
                 rules: {
                     required: value => !!value || 'Required',
-                    min: v => v.length >= 5 || 'Min 5 characters',
+                    min: v => !v || v.length >= 5 || 'Min 5 characters',
                     email: value => {
-                        this.usernameError = false
-                        const pattern = /^((([a-zA-Z._-]+[0-9]*)+)@([a-z]{2,10})\.([a-z]{2,8}))$/
+                        const pattern = /^((([a-zA-Z._\-]+[0-9]*)+)@([a-z]{2,10})\.([a-z]{2,8}))$/
                         return pattern.test(value) || 'Invalid e-mail'
                     },
                     number: value => {
                         const pattern = /^[1-9]+[0-9]*$/
                         return pattern.test(value) || 'Invalid number'
                     },
-                    confirm: value => {
-                        this.confirmError = false
-                        return value == this.password || 'Passwords do not match'
-                    }
+                    confirm: v => v == this.regForm.password || 'Passwords do not match'
+                },
+                checkValidity() {
+                    return this.rules.email(this.regForm.username) !== true ||
+                           this.rules.number(this.regForm.apartmentNumber) !== true ||
+                           this.rules.min(this.regForm.password) !== true
                 }
             }
         },
@@ -209,78 +200,41 @@
             const uri = window.location.href.split('?')
 
             if (uri.length > 1 && uri[1] == 'error') {
-                this.alertValue = true
-                this.isError = true
-                this.alertText = 'Invalid E-mail or password'
+                this.showAlert(true, 'Invalid E-mail or password')
             }
         },
         methods: {
             signUp() {
-                const user = {
-                                  fullName: this.fullName,
-                                  username: this.username,
-                                  password: this.password,
-                                  address: this.city + ', ' + this.street + ', ' + this.houseNumber,
-                                  apartmentNumber: this.apartmentNumber
+                if (Object.values(this.regForm).some(field => !field)) {
+                    this.showAlert(true, 'All fields required')
                 }
-
-                if (this.fullName == ''
-                            || this.city == ''
-                            || this.apartmentNumber == ''
-                            || this.houseNumber == ''
-                            || this.street == ''
-                            || this.username == ''
-                            || this.password == ''
-                            || this.confirmPassword == '') {
-                    this.isError = true
-                    this.alertValue = true
-                    this.alertText = 'All fields required'
+                else if (this.checkValidity()) {
+                    this.showAlert(true, 'Invalid fields')
                 }
-                else if (!this.rules.email(this.email)
-                            || !this.rules.number(this.apartmentNumber)
-                            || !this.rules.min(this.password)) {
-                    this.isError = true
-                    this.alertValue = true
-                    this.alertText = 'Invalid fields'
-                }
-                else if (this.password != this.confirmPassword) {
-                    this.isError = true
-                    this.alertValue = true
-                    this.alertText = 'Passwords do not match'
-                    this.confirmError = true;
+                else if (this.regForm.password !== this.regForm.confirmPassword) {
+                    this.showAlert(true, 'Passwords do not match')
                 }
                 else {
-                    userApi.save({}, user).then(result => {
-                        if (result.data == '') {
-                            this.isError = true
-                            this.alertValue = true
-                            this.usernameError = true
-                            this.alertText = 'A user with the same e-mail already exists'
+                    let user = ({
+                        fullName, username, password, apartmentNumber} = this.regForm)
+                    user.address = [this.regForm.city, this.regForm.street, this.regForm.house].join(", ")
+
+                    this.$resource('/users{/id}').save({}, user).then(result => {
+                        if (!result.data) {
+                            this.showAlert(true, 'A user with the same e-mail already exists')
                         } else {
-                            this.isError = false
-                            this.alertValue = true
-                            this.alertText = 'User is registered'
+                            this.showAlert(false, 'User is registered')
                         }
                     })
                 }
             },
             click() {
-                this.fullName = ''
-                this.city = ''
-                this.apartmentNumber = ''
-                this.houseNumber = ''
-                this.street = ''
-                this.username = ''
-                this.password = ''
-                this.confirmPassword = ''
+                for (let key in this.regForm) {
+                    this.regForm[key] = ''
+                }
+                this.logUser = this.logPass = ''
 
-                this.alertValue = false
-
-                this.logUser = ''
-                this.logPass = ''
-            },
-            signIn() {
-
+                this.alert.value = false
             }
         }
     }

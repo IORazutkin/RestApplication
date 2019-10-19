@@ -1,6 +1,5 @@
 package com.mrEasy.RestApplication.controller.rest;
 
-import com.mrEasy.RestApplication.entity.Apartment;
 import com.mrEasy.RestApplication.entity.Receipt;
 import com.mrEasy.RestApplication.repo.ReceiptRepo;
 import org.springframework.beans.BeanUtils;
@@ -22,12 +21,8 @@ public class ReceiptRestController {
     }
 
     @GetMapping
-    public List<Receipt> getList(@RequestParam(required = false, defaultValue = "All") String serviceTitle,
-                                 @RequestParam(required = false, defaultValue = "false") Boolean unpaidOnly,
-                                 @RequestParam(required = false, defaultValue = "") String apartmentId) {
+    public List<Receipt> getList(@RequestParam(required = false, defaultValue = "") String apartmentId) {
         return receiptRepo.findAll(Sort.by(Sort.Direction.DESC, "receiptId")).stream()
-                .filter(x -> !unpaidOnly || x.getPaymentDate() == null)
-                .filter(x -> serviceTitle.equals("All") || x.getService().getTitle().equals(serviceTitle))
                 .filter(x -> apartmentId.equals("") || x.getApartment().getApartmentId().toString().equals(apartmentId))
                 .collect(Collectors.toList());
     }
